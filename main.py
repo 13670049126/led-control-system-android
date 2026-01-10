@@ -14,8 +14,15 @@ from kivy.graphics import Color, Rectangle
 import time
 import os
 import numpy as np
-import serial
-import serial.tools.list_ports
+# 尝试导入串口模块，Android上可能无法使用
+try:
+    import serial
+    import serial.tools.list_ports
+    HAS_SERIAL = True
+except ImportError:
+    serial = None
+    serial.tools = None
+    HAS_SERIAL = False
 import json
 
 CONFIG_FILE = 'config.json'
@@ -37,7 +44,9 @@ class LEDControlApp(App):
         self.title = "LED灯条控制系统"
         
         # 初始化变量
-        self.ser = serial.Serial()
+        self.ser = None
+        if HAS_SERIAL:
+            self.ser = serial.Serial()
         self.TimeCount = 0
         self.LastTime = 0
         self.waterfall_offset = 0
@@ -66,7 +75,7 @@ class LEDControlApp(App):
         # 启动时钟
         Clock.schedule_interval(self.update_time, 1)
         Clock.schedule_once(self.port_check, 0.1)
-        Clock.schedule_once(self.ShotAndSendThread, 0.1)
+        Clock.schedule_once(self.ShotAndSendThread, 0.2)
         
         return self.create_main_layout()
     
@@ -382,23 +391,37 @@ class LEDControlApp(App):
     
     def port_check(self, dt):
         """检测串口"""
-        port_list = list(serial.tools.list_ports.comports())
-        ports = [port[0] for port in port_list]
-        
-        if ports:
-            self.combo_serial.values = ports
-            self.combo_serial.text = ports[0]
+        if HAS_SERIAL:
+            try:
+                port_list = list(serial.tools.list_ports.comports())
+                ports = [port[0] for port in port_list]
+                
+                if ports:
+                    self.combo_serial.values = ports
+                    self.combo_serial.text = ports[0]
+                else:
+                    self.combo_serial.values = ['无可用串口']
+                    self.combo_serial.text = '无可用串口'
+            except Exception as e:
+                self.log(f"串口检测错误: {e}", 1)
+                self.combo_serial.values = ['串口不可用']
+                self.combo_serial.text = '串口不可用'
         else:
-            self.combo_serial.values = ['无可用串口']
-            self.combo_serial.text = '无可用串口'
+            self.combo_serial.values = ['串口功能不可用']
+            self.combo_serial.text = '串口功能不可用'
+            self.log("当前平台不支持串口功能", 1)
         
         # 每秒刷新一次串口列表
         Clock.schedule_once(self.port_check, 1.0)
     
     def open_port(self, instance):
         """打开或关闭串口"""
+        if not HAS_SERIAL:
+            self.log("当前平台不支持串口功能", 1)
+            return
+        
         try:
-            if self.ser.is_open:
+            if self.ser and self.ser.is_open:
                 self.ser.close()
                 self.connection_status = "状态：已断开"
                 self.btn_connect.text = "连接"
@@ -416,7 +439,7 @@ class LEDControlApp(App):
                 self.label_status.text = self.connection_status
                 self.log("打开串口成功", 0)
         except Exception as e:
-            self.log(f"打开串口失败: {e}", 1)
+            self.log(f"串口操作失败: {e}", 1)
             self.connection_status = "状态：未连接"
             self.label_status.text = self.connection_status
     
@@ -483,7 +506,7 @@ class LEDControlApp(App):
                 sendrgb[3 + i*3 + 1] = r
                 sendrgb[3 + i*3 + 2] = b
         
-        if self.ser.is_open:
+        if HAS_SERIAL and self.ser and self.ser.is_open:
             self.uart_send_cmd(sendrgb)
         
         # 短时间后再次执行
@@ -491,7 +514,7 @@ class LEDControlApp(App):
     
     def uart_send_cmd(self, cmd):
         """发送数据到串口"""
-        if self.ser.is_open:
+        if HAS_SERIAL and self.ser and self.ser.is_open:
             try:
                 self.ser.write(cmd)
             except Exception as e:
