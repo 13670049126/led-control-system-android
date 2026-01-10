@@ -3,3 +3,4 @@ kivy
 numpy
 opencv-python
 pyserial
+cython
