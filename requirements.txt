@@ -1,5 +1,5 @@
 python3
-kivy
+kivy==2.0.0
 numpy
 opencv-python
 pyserial
