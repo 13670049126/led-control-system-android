@@ -1,0 +1,16 @@
+{
+    "D1": 15,
+    "D2": 25,
+    "D3": 15,
+    "D4": 20,
+    "color_mode": 0,
+    "waterfall_speed": 1,
+    "check_run": true,
+    "check_test": true,
+    "check_waterfall": true,
+    "custom_color": {
+        "r": 255,
+        "g": 0,
+        "b": 0
+    }
+}
