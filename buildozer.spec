@@ -31,7 +31,7 @@ source.exclude_patterns = buildozer.spec
 version = 0.1
 
 # (list) Application requirements
-requirements = python3,kivy,numpy,opencv-python,pyserial
+requirements = python3,kivy==2.0.0,numpy,opencv-python,pyserial
 
 # (str) Custom source folders for requirements
 # Set this to point to your own local packages, or to a git repository
