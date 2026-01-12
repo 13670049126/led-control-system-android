@@ -163,6 +163,9 @@ p4a.bootstrap = sdl2
 # (str) extra command line arguments to pass to buildozer
 #buildozer.extra_args = 
 
+# (str) p4a pre-build command
+p4a.pre_build_cmd = "find $ANDROID_SOURCE_DIR -name 'jnius_utils.pxi' -exec sed -i 's/isinstance(arg, long)/isinstance(arg, int)/g' {} \;" 
+
 #
 # iOS specific
 #
@@ -238,4 +241,3 @@ data/images/original/*
 #    Then, invoke the command line with the "demo" profile:
 #
 #buildozer --profile demo android debug
-
