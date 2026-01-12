@@ -30,46 +30,31 @@ jobs:
     
     - name: Build APK
       run: |
-        # 两步构建策略：1. 先下载依赖 2. 修复所有jnius文件 3. 完成构建
+        # 两步构建策略：1. 先运行buildozer让它下载依赖 2. 修复jnius文件 3. 完成构建
         
         # 第一步：运行buildozer让它下载所有依赖，即使失败
-        buildozer android debug --verbose || true
+        buildozer --log-level=2 android debug --force-build || true
         
-        # 第二步：查找并修复所有jnius相关文件中的long类型
-        echo "=== Finding and fixing all jnius files ==="
-        
-        # 查找所有jnius相关的.pxi和.pyx文件
+        # 第二步：查找并修复所有jnius相关文件
+        echo "=== Fixing jnius files ==="
+        # 查找所有jnius相关文件
         JNIUS_FILES=$(find /home/runner -path "*/jnius/*" -name "*.pxi" -o -name "*.pyx" 2>/dev/null)
         
-        if [ -n "$JNIUS_FILES" ]; then
-            echo "Found jnius files:"
-            echo "$JNIUS_FILES"
-            
-            # 修复每个文件
-            for file in $JNIUS_FILES; do
-                echo "=== Fixing $file ==="
-                # 显示包含long的行
-                grep -n "long" "$file" || echo "No 'long' found in $file"
-                
-                # 替换所有long相关的代码
-                sed -i 's/isinstance(arg, long)/isinstance(arg, int)/g' "$file"
-                sed -i 's/isinstance(py_arg, long)/isinstance(py_arg, int)/g' "$file"
-                sed -i 's/(int, long)/(int, int)/g' "$file"
-                sed -i 's/(long, int)/(int, int)/g' "$file"
-                sed -i 's/(long)/(int)/g' "$file"
-                sed -i 's/long(/int(/g' "$file"
-                
-                # 显示修复后的相关行
-                echo "=== After fixing ==="
-                grep -n "int" "$file" | grep -i "instance" || echo "No 'instance' found after fix"
-            done
-        else
-            echo "No jnius files found, skipping fix"
-        fi
+        for file in $JNIUS_FILES; do
+            echo "Fixing $file"
+            # 替换所有long类型
+            sed -i 's/long: "J"/int: "J"/g' "$file"
+            sed -i 's/long: "j"/int: "j"/g' "$file"
+            sed -i 's/isinstance(arg, long)/isinstance(arg, int)/g' "$file"
+            sed -i 's/isinstance(py_arg, long)/isinstance(py_arg, int)/g' "$file"
+            sed -i 's/(int, long)/(int, int)/g' "$file"
+            sed -i 's/(long, int)/(int, int)/g' "$file"
+            sed -i 's/(long)/(int)/g' "$file"
+            sed -i 's/long(/int(/g' "$file"
+        done
         
         # 第三步：再次运行buildozer完成构建
-        echo "=== Running buildozer again to complete build ==="
-        buildozer android debug --verbose
+        buildozer --log-level=2 android debug --force-build
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
