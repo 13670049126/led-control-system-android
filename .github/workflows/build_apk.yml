@@ -30,12 +30,20 @@ jobs:
     
     - name: Build APK
       run: |
+        # 显示当前目录和文件
+        pwd
+        ls -la
+        
         # 直接修改buildozer.spec文件，添加必要配置
         echo "android.no_use_distutils = True" >> buildozer.spec
         
         # 使用直接修改方法，避免Kivy补丁检查
         # 先克隆python-for-android并修改Kivy recipe
         git clone https://github.com/kivy/python-for-android.git
+        
+        # 显示克隆的目录结构
+        ls -la python-for-android
+        ls -la python-for-android/pythonforandroid/recipes/kivy/
         
         # 直接替换整个Kivy recipe文件
         cat > python-for-android/pythonforandroid/recipes/kivy/__init__.py << 'EOF'
@@ -64,8 +72,14 @@ class KivyRecipe(PythonRecipe):
 recipe = KivyRecipe()
 EOF
         
+        # 显示修改后的Kivy recipe内容
+        cat python-for-android/pythonforandroid/recipes/kivy/__init__.py
+        
         # 设置buildozer使用我们修改后的python-for-android
         echo "p4a.source_dir = $(pwd)/python-for-android" >> buildozer.spec
+        
+        # 显示最终的buildozer.spec文件内容
+        cat buildozer.spec
         
         # 运行构建，设置环境变量允许root用户运行
         BUILDOZER_ALLOW_ROOT=1 buildozer android debug --log-level=2
