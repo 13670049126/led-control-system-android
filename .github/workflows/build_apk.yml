@@ -33,25 +33,55 @@ jobs:
         # 安装特定版本的cython，与Kivy 1.11.1兼容
         pip install cython==0.29.32
         
-        # 克隆python-for-android仓库
-        git clone https://github.com/kivy/python-for-android.git
+        # 创建一个临时脚本，用于替换Kivy recipe文件
+        cat > fix_kivy_recipe.py << 'EOF'
+import os
+import re
+import sys
+
+# 查找所有python-for-android目录
+for root, dirs, files in os.walk('.buildozer'):
+    if 'python-for-android' in dirs:
+        p4a_dir = os.path.join(root, 'python-for-android')
+        kivy_recipe = os.path.join(p4a_dir, 'pythonforandroid', 'recipes', 'kivy', '__init__.py')
         
-        # 修复Kivy recipe
-        KIVY_RECIPE="python-for-android/pythonforandroid/recipes/kivy/__init__.py"
-        if [ -f "$KIVY_RECIPE" ]; then
-            echo "Found Kivy recipe at: $KIVY_RECIPE"
-            # 修改Kivy补丁检查函数，直接返回False，跳过补丁检查
-            sed -i 's/def is_kivy_affected_by_deadlock_issue(recipe, arch):/def is_kivy_affected_by_deadlock_issue(recipe, arch):\n    return False/' "$KIVY_RECIPE"
-            echo "Fixed Kivy patch check logic"
-        else
-            echo "Kivy recipe not found"
-        fi
+        if os.path.exists(kivy_recipe):
+            print(f"Found Kivy recipe at: {kivy_recipe}")
+            
+            # 读取原始文件内容
+            with open(kivy_recipe, 'r') as f:
+                content = f.read()
+            
+            print("Original Kivy recipe content:")
+            print(content)
+            
+            # 定义要替换的函数模式
+            old_func_pattern = r"def is_kivy_affected_by_deadlock_issue\(recipe, arch\):[\s\S]*?^$"
+            new_func = "def is_kivy_affected_by_deadlock_issue(recipe, arch):\n    return False\n"
+            
+            # 替换函数
+            modified_content = re.sub(old_func_pattern, new_func, content, flags=re.MULTILINE)
+            
+            # 写入修改后的内容
+            with open(kivy_recipe, 'w') as f:
+                f.write(modified_content)
+            
+            print("Modified Kivy recipe content:")
+            print(modified_content)
+            print("Successfully modified Kivy recipe to skip patch check")
+            sys.exit(0)
         
-        # 修改buildozer.spec文件，使用修改后的python-for-android
-        echo "p4a.source_dir = $(pwd)/python-for-android" >> buildozer.spec
-        echo "android.no_use_distutils = True" >> buildozer.spec
+print("ERROR: Kivy recipe not found")
+sys.exit(1)
+EOF
         
-        # 运行构建
+        # 运行buildozer构建，但超时10秒后终止（让它有时间下载文件）
+        timeout 10 buildozer android debug --log-level=2 --force || true
+        
+        # 运行修复脚本
+        python fix_kivy_recipe.py
+        
+        # 再次运行buildozer构建，这次应该能成功
         buildozer android debug --log-level=2 --force
     
     - name: Upload APK
