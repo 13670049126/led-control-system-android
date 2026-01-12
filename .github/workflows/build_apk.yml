@@ -33,35 +33,26 @@ jobs:
         # 安装特定版本的cython，与Kivy 1.11.1兼容
         pip install cython==0.29.32
         
-        # 修改buildozer.spec文件，添加必要配置
-        echo "android.no_use_distutils = True" >> buildozer.spec
+        # 克隆python-for-android仓库
+        git clone https://github.com/kivy/python-for-android.git
         
-        # 先运行一次buildozer android debug，让它下载并准备python-for-android
-        buildozer --log-level=2 android debug || true
-        
-        # 现在找到实际使用的python-for-android目录，并修复Kivy recipe
-        P4A_DIR=$(find .buildozer -name "python-for-android" -type d | grep -E "platform/python-for-android$")
-        if [ -n "$P4A_DIR" ]; then
-            echo "Found python-for-android directory at: $P4A_DIR"
-            KIVY_RECIPE="$P4A_DIR/pythonforandroid/recipes/kivy/__init__.py"
-            if [ -f "$KIVY_RECIPE" ]; then
-                echo "Found Kivy recipe at: $KIVY_RECIPE"
-                # 备份原始文件
-                cp "$KIVY_RECIPE" "$KIVY_RECIPE.backup"
-                # 修改Kivy补丁检查函数，直接返回False，跳过补丁检查
-                sed -i 's/def is_kivy_affected_by_deadlock_issue(recipe, arch):/def is_kivy_affected_by_deadlock_issue(recipe, arch):\n    return False/' "$KIVY_RECIPE"
-                echo "Fixed Kivy patch check logic"
-                # 查看修改后的文件内容
-                cat "$KIVY_RECIPE"
-            else
-                echo "Kivy recipe not found at expected path: $KIVY_RECIPE"
-            fi
+        # 修复Kivy recipe
+        KIVY_RECIPE="python-for-android/pythonforandroid/recipes/kivy/__init__.py"
+        if [ -f "$KIVY_RECIPE" ]; then
+            echo "Found Kivy recipe at: $KIVY_RECIPE"
+            # 修改Kivy补丁检查函数，直接返回False，跳过补丁检查
+            sed -i 's/def is_kivy_affected_by_deadlock_issue(recipe, arch):/def is_kivy_affected_by_deadlock_issue(recipe, arch):\n    return False/' "$KIVY_RECIPE"
+            echo "Fixed Kivy patch check logic"
         else
-            echo "python-for-android directory not found"
+            echo "Kivy recipe not found"
         fi
         
-        # 再次运行构建，这次应该能成功
-        buildozer --log-level=2 android debug
+        # 修改buildozer.spec文件，使用修改后的python-for-android
+        echo "p4a.source_dir = $(pwd)/python-for-android" >> buildozer.spec
+        echo "android.no_use_distutils = True" >> buildozer.spec
+        
+        # 运行构建
+        buildozer android debug --log-level=2 --force
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
