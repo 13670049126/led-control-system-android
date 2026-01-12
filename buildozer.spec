@@ -31,7 +31,7 @@ source.exclude_patterns = buildozer.spec
 version = 0.1
 
 # (list) Application requirements
-requirements = python3,kivy==2.0.0,numpy,opencv-python,pyserial
+requirements = python3,kivy==2.0.0,numpy,opencv-python,pyserial,cython
 
 # (str) Custom source folders for requirements
 # Set this to point to your own local packages, or to a git repository
@@ -79,10 +79,10 @@ fullscreen = 0
 #android.presplash_color = #FFFFFF
 
 # (list) Permissions
-android.permissions = INTERNET, BLUETOOTH, BLUETOOTH_ADMIN, ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION, USB_PERMISSION
+android.permissions = INTERNET, BLUETOOTH, BLUETOOTH_ADMIN, ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION, USB_PERMISSION, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE
 
 # (list) features (adds uses-feature -tags to manifest)
-#android.features = android.hardware.usb.host
+android.features = android.hardware.usb.host
 
 # (int) Target Android API, should be as high as possible.
 android.api = 31
@@ -128,6 +128,9 @@ android.accept_sdk_license = True
 # this is not the same as app version and should only be edited if you know what you're doing
 # android.numeric_version = 1
 
+# (str) JVM arguments for the application
+android.jvm_args = -Xmx2048m
+
 #
 # Python for android (p4a) specific
 #
@@ -148,7 +151,7 @@ android.accept_sdk_license = True
 #p4a.hook = 
 
 # (str) Bootstrap to use for android builds
-# p4a.bootstrap = sdl2
+p4a.bootstrap = sdl2
 
 # (int) port number to specify an explicit --port= p4a argument (eg for bootstrap flask)
 #p4a.port = 
