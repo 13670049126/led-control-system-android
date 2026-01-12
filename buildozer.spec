@@ -90,8 +90,8 @@ android.api = 31
 # (int) Minimum API your APK will support.
 android.minapi = 21
 
-# (int) Android SDK version to use
-android.sdk = 20
+# (int) Android SDK version to use - 已弃用，使用android.api代替
+# android.sdk = 20
 
 # (str) Android NDK version to use
 android.ndk = 25b
