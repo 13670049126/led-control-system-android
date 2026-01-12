@@ -30,27 +30,41 @@ jobs:
     
     - name: Build APK
       run: |
-        # 两步构建策略：1. 先下载依赖 2. 修复文件 3. 完成构建
+        # 两步构建策略：1. 先下载依赖 2. 修复所有jnius文件 3. 完成构建
         
         # 第一步：运行buildozer让它下载所有依赖，即使失败
         buildozer android debug --verbose || true
         
-        # 第二步：查找并修复jnius_utils.pxi文件
-        echo "=== Finding and fixing jnius_utils.pxi ==="
-        JNIUS_FILE=$(find /home/runner -name "jnius_utils.pxi" 2>/dev/null | head -1)
-        if [ -f "$JNIUS_FILE" ]; then
-            echo "Found jnius_utils.pxi at $JNIUS_FILE"
-            echo "=== Original content around line 323 ==="
-            sed -n '320,325p' "$JNIUS_FILE"
+        # 第二步：查找并修复所有jnius相关文件中的long类型
+        echo "=== Finding and fixing all jnius files ==="
+        
+        # 查找所有jnius相关的.pxi和.pyx文件
+        JNIUS_FILES=$(find /home/runner -path "*/jnius/*" -name "*.pxi" -o -name "*.pyx" 2>/dev/null)
+        
+        if [ -n "$JNIUS_FILES" ]; then
+            echo "Found jnius files:"
+            echo "$JNIUS_FILES"
             
-            # 替换long类型
-            sed -i 's/isinstance(arg, long)/isinstance(arg, int)/g' "$JNIUS_FILE"
-            sed -i 's/(isinstance(arg, long)/(isinstance(arg, int)/g' "$JNIUS_FILE"
-            
-            echo "=== Fixed content around line 323 ==="
-            sed -n '320,325p' "$JNIUS_FILE"
+            # 修复每个文件
+            for file in $JNIUS_FILES; do
+                echo "=== Fixing $file ==="
+                # 显示包含long的行
+                grep -n "long" "$file" || echo "No 'long' found in $file"
+                
+                # 替换所有long相关的代码
+                sed -i 's/isinstance(arg, long)/isinstance(arg, int)/g' "$file"
+                sed -i 's/isinstance(py_arg, long)/isinstance(py_arg, int)/g' "$file"
+                sed -i 's/(int, long)/(int, int)/g' "$file"
+                sed -i 's/(long, int)/(int, int)/g' "$file"
+                sed -i 's/(long)/(int)/g' "$file"
+                sed -i 's/long(/int(/g' "$file"
+                
+                # 显示修复后的相关行
+                echo "=== After fixing ==="
+                grep -n "int" "$file" | grep -i "instance" || echo "No 'instance' found after fix"
+            done
         else
-            echo "jnius_utils.pxi not found, skipping fix"
+            echo "No jnius files found, skipping fix"
         fi
         
         # 第三步：再次运行buildozer完成构建
