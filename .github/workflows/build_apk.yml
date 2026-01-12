@@ -36,7 +36,22 @@ jobs:
         # 修改buildozer.spec文件，添加--no-use-distutils参数
         echo "android.no_use_distutils = True" >> buildozer.spec
         
-        # 直接运行构建，buildozer会自动下载所需依赖
+        # 第一次运行buildozer，让它下载python-for-android
+        buildozer android debug --verbose || true
+        
+        # 修复python-for-android中的Kivy补丁检查逻辑
+        echo "=== Fixing Kivy patch check logic ==="
+        KIVY_RECIPE=$(find /home/runner -path "*/recipes/kivy/__init__.py" 2>/dev/null | head -1)
+        if [ -f "$KIVY_RECIPE" ]; then
+            echo "Found Kivy recipe at $KIVY_RECIPE"
+            # 修改Kivy补丁检查函数，直接返回False，跳过补丁检查
+            sed -i 's/def is_kivy_affected_by_deadlock_issue(recipe, arch):/def is_kivy_affected_by_deadlock_issue(recipe, arch):\n    return False/' "$KIVY_RECIPE"
+            echo "Fixed Kivy patch check logic"
+        else
+            echo "Kivy recipe not found, skipping fix"
+        fi
+        
+        # 再次运行buildozer完成构建
         buildozer --log-level=2 android debug
     
     - name: Upload APK
