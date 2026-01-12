@@ -36,12 +36,17 @@ jobs:
         # 修改buildozer.spec文件，添加--no-use-distutils参数
         echo "android.no_use_distutils = True" >> buildozer.spec
         
-        # 第一次运行buildozer，让它下载python-for-android
-        buildozer android debug --verbose || true
+        # 创建一个临时的python-for-android目录
+        mkdir -p /home/runner/p4a
+        cd /home/runner/p4a
         
-        # 修复python-for-android中的Kivy补丁检查逻辑
+        # 克隆python-for-android仓库
+        git clone https://github.com/kivy/python-for-android.git
+        cd python-for-android
+        
+        # 修复Kivy的recipe文件
         echo "=== Fixing Kivy patch check logic ==="
-        KIVY_RECIPE=$(find /home/runner -path "*/recipes/kivy/__init__.py" 2>/dev/null | head -1)
+        KIVY_RECIPE="$(pwd)/pythonforandroid/recipes/kivy/__init__.py"
         if [ -f "$KIVY_RECIPE" ]; then
             echo "Found Kivy recipe at $KIVY_RECIPE"
             # 修改Kivy补丁检查函数，直接返回False，跳过补丁检查
@@ -51,7 +56,13 @@ jobs:
             echo "Kivy recipe not found, skipping fix"
         fi
         
-        # 再次运行buildozer完成构建
+        # 返回项目目录
+        cd /home/runner/work/led-control-system-android/led-control-system-android
+        
+        # 使用修改后的python-for-android运行buildozer
+        echo "p4a.source_dir = /home/runner/p4a/python-for-android" >> buildozer.spec
+        
+        # 运行构建
         buildozer --log-level=2 android debug
     
     - name: Upload APK
