@@ -238,3 +238,4 @@ data/images/original/*
 #    Then, invoke the command line with the "demo" profile:
 #
 #buildozer --profile demo android debug
+
