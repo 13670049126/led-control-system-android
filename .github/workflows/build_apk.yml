@@ -30,18 +30,13 @@ jobs:
     
     - name: Build APK
       run: |
-        # 更可靠的构建策略：清理旧构建，然后使用特定版本的cython和kivy
-        
-        # 清理旧构建
-        buildozer android clean
-        
         # 安装特定版本的cython，与Kivy 1.11.1兼容
         pip install cython==0.29.32
         
         # 修改buildozer.spec文件，添加--no-use-distutils参数
         echo "android.no_use_distutils = True" >> buildozer.spec
         
-        # 运行构建，使用更简单的配置
+        # 直接运行构建，buildozer会自动下载所需依赖
         buildozer --log-level=2 android debug
     
     - name: Upload APK
